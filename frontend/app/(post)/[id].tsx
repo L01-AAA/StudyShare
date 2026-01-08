@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   Text,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { createConversation } from "@/services/messageApi";
 
 type PostImage = {
   id: number;
@@ -80,6 +82,31 @@ export default function PostDetailScreen() {
       5: "Hóa học",
     };
     return categoryMap[id] || `Môn học ${id}`;
+  };
+
+  const handleChatPress = async () => {
+    if (!post) return;
+
+    try {
+      // Create or get conversation with the post author
+      const conversation = await createConversation(post.user_id);
+
+      // Navigate to message detail screen
+      router.push({
+        pathname: "/messagepage/[conversationId]",
+        params: {
+          conversationId: conversation.id.toString(),
+          participantName: conversation.participantName,
+          participantAvatar: conversation.participantAvatar || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      Alert.alert(
+        "Lỗi",
+        error.message || "Không thể bắt đầu cuộc hội thoại. Vui lòng thử lại."
+      );
+    }
   };
 
   if (loading) {
@@ -233,7 +260,6 @@ export default function PostDetailScreen() {
               )}
             </TouchableOpacity>
 
-
             {/* DIVIDER */}
             <View className="h-6 w-px bg-orange-500 mx-3" />
 
@@ -261,7 +287,10 @@ export default function PostDetailScreen() {
           </View>
 
           {/* CHAT */}
-          <TouchableOpacity className="w-9 h-9 rounded-full bg-white items-center justify-center">
+          <TouchableOpacity
+            onPress={handleChatPress}
+            className="w-9 h-9 rounded-full bg-white items-center justify-center"
+          >
             <Ionicons name="chatbubble-outline" size={18} color="#333" />
           </TouchableOpacity>
         </View>
