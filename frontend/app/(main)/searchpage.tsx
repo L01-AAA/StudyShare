@@ -88,11 +88,15 @@ const fetchPosts = async (params: {
   }
 
   if (params.filters.subjects.length > 0) {
-    query.append("subject_ids", params.filters.subjects.join(","));
+    params.filters.subjects.forEach((id) => {
+      query.append("subject_ids", id.toString());
+    });
   }
 
   if (params.filters.categories.length > 0) {
-    query.append("category_ids", params.filters.categories.join(","));
+    params.filters.categories.forEach((id) => {
+      query.append("category_ids", id.toString());
+    });
   }
 
   const res = await api.get<ApiResponse>(`/posts?${query.toString()}`);
@@ -349,6 +353,7 @@ export default function SearchPage() {
             placeholder="Tìm kiếm học liệu..."
             className="ml-3 flex-1"
             value={q}
+            placeholderTextColor="#9CA3AF"
             onChangeText={setQ}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
@@ -387,7 +392,7 @@ export default function SearchPage() {
 
       {loadingSearch ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color={"#ff6a00"} />
         </View>
       ) : (
         <FlatList
@@ -399,7 +404,7 @@ export default function SearchPage() {
           onEndReachedThreshold={0.4}
           ListFooterComponent={
             loading ? (
-              <ActivityIndicator className="my-6" />
+              <ActivityIndicator className="my-6" color={"#ff6a00"} />
             ) : !hasMore && materials.length > 0 ? (
               <Text className="text-center text-gray-500 my-6">
                 Bạn đã lướt hết học liệu
@@ -407,7 +412,7 @@ export default function SearchPage() {
             ) : null
           }
           ListEmptyComponent={
-            !loadingSearch ? (
+            !loading ? (
               <View className="items-center justify-center py-12">
                 <Ionicons name="search-outline" size={60} color="#9CA3AF" />
                 <Text className="text-gray-500 mt-4">Không tìm thấy học liệu</Text>

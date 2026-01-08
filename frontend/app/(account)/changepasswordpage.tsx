@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -168,7 +168,7 @@ export default function ChangePasswordPage() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={"#ff6a00"} />
               ) : (
                 <Text className="text-base font-semibold text-white">
                   Tiếp theo
@@ -233,7 +233,7 @@ export default function ChangePasswordPage() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={"#ff6a00"} />
               ) : (
                 <Text className="text-base font-semibold text-white">
                   Thay đổi mật khẩu

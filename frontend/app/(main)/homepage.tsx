@@ -54,7 +54,7 @@ const Categories: Category[] = [
   {
     id: 2,
     title: "Sách giáo trình",
-    image: require("../../assets/images/giaotrinh.png"),
+    image: require("../../assets/images/giaotrinh.jpg"),
   },
   {
     id: 3,
@@ -131,7 +131,7 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    fetchMaterials(true);
+    fetchMaterials(false);
   }, []);
 
   /* ================= ITEM ================= */
@@ -189,6 +189,7 @@ export default function HomePage() {
             <TextInput
               placeholder="Tìm kiếm dụng cụ học tập, tài liệu..."
               className="ml-3 flex-1 text-base text-gray-500"
+              placeholderTextColor="#9CA3AF"
               editable={false}
             />
           </View>
@@ -251,7 +252,7 @@ export default function HomePage() {
         }
         ListFooterComponent={
           loading ? (
-            <ActivityIndicator className="my-6" />
+            <ActivityIndicator className="my-6" color={"#ff6a00"}/>
           ) : initialized && !hasMore ? (
             <Text className="text-center text-gray-500 my-6">
               Bạn đã lướt hết học liệu

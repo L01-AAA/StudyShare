@@ -247,19 +247,22 @@ const CreatePostPage: React.FC<CreatePostPageProps> = ({
   /* ===================== UI PARTS ===================== */
 
   const renderStepIndicator = () => {
-    const isFromStep2 = currentStep >= 2;
+    const isFromStep2 = currentStep >= 1;
     const isLastStep = currentStep === TOTAL_STEP - 1;
 
     return (
       <View className="px-5 mb-6">
         <View className="flex-row items-center mb-4">
-          <TouchableOpacity
-            onPress={resetForm}
-            className="px-6 py-2 rounded-full bg-orange-300"
-          >
-            <Text className="text-white font-semibold">Hủy</Text>
-          </TouchableOpacity>
 
+
+          {isFromStep2 && (
+            <TouchableOpacity
+              onPress={resetForm}
+              className="px-6 py-2 rounded-full bg-orange-300"
+            >
+              <Text className="text-white font-semibold">Hủy</Text>
+            </TouchableOpacity>
+          )}
           {isFromStep2 && (
             <TouchableOpacity
               onPress={() => setCurrentStep((p) => p - 1)}
@@ -272,9 +275,24 @@ const CreatePostPage: React.FC<CreatePostPageProps> = ({
           <View className="flex-1" />
 
           <TouchableOpacity
-            onPress={() =>
-              isLastStep ? submitPost() : setCurrentStep((p) => p + 1)
-            }
+            onPress={() => {
+              if (isLastStep) {
+                submitPost();
+                return;
+              }
+
+              // If currently on step 2 (index 1), validate required fields
+              if (currentStep === 1) {
+                const titleValid = !!formData.title?.trim();
+                const descValid = !!formData.description?.trim();
+                if (!titleValid || !descValid) {
+                  alert("Vui lòng điền tiêu đề và mô tả trước khi tiếp tục");
+                  return;
+                }
+              }
+
+              setCurrentStep((p) => p + 1);
+            }}
             className="px-6 py-2 rounded-full border-2 border-orange-500"
           >
             <Text className="text-orange-400 font-semibold">
@@ -345,7 +363,9 @@ const CreatePostPage: React.FC<CreatePostPageProps> = ({
         Mô tả cho bài viết
       </Text>
 
-      <Text className="text-base font-semibold mb-2">Tiêu đề của bài viết</Text>
+      <Text className="text-base font-semibold mb-2">
+        Tiêu đề của bài viết <Text className="text-red-500">*</Text>
+      </Text>
       <TextInput
         className="bg-white border border-gray-300 rounded-lg px-4 py-3 mb-4"
         placeholder="VD: Combo 3 đại cương"
@@ -382,7 +402,9 @@ const CreatePostPage: React.FC<CreatePostPageProps> = ({
         </Picker>
       </View>
 
-      <Text className="text-base font-semibold mb-2">Mô tả</Text>
+      <Text className="text-base font-semibold mb-2">
+        Mô tả <Text className="text-red-500">*</Text>
+      </Text>
       <TextInput
         className="bg-white border border-gray-300 rounded-lg px-4 py-3 mb-4 h-32"
         placeholder="VD: [ Góc pass tài liệu] Mình có mấy cuốn sách hiện đang không còn sử dụng nữa nên muốn pass lại à"
