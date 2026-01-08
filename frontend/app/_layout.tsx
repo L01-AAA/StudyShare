@@ -1,6 +1,7 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
-import './global.css';
+import { NotificationProvider } from "@/components/NotificationContext";
+import "./global.css";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -10,5 +11,13 @@ export default function RootLayout() {
     "Roboto-Bold": require("../assets/fonts/Roboto-Bold.ttf"),
   });
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  return (
+    <NotificationProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </NotificationProvider>
+  );
 }

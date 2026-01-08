@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { createConversation } from "@/services/messageApi";
 
 const { width } = Dimensions.get("window");
 
@@ -64,37 +65,36 @@ export default function PostDetailScreen() {
     router.push(`/posts/edit/${post?.id}`);
   };
 
-const handleDelete = () => {
-  setShowMenu(false);
+  const handleDelete = () => {
+    setShowMenu(false);
 
-  Alert.alert(
-    "Xóa bài đăng",
-    "Bạn có chắc chắn muốn xóa bài đăng này không? Hành động này không thể hoàn tác.",
-    [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setLoading(true);
-            await api.delete(`/posts/${post?.id}`);
-            router.back();
-          } catch (e) {
-            console.error("Delete post error:", e);
-          } finally {
-            setLoading(false);
-          }
+    Alert.alert(
+      "Xóa bài đăng",
+      "Bạn có chắc chắn muốn xóa bài đăng này không? Hành động này không thể hoàn tác.",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
         },
-      },
-    ],
-    { cancelable: true }
-  );
-};
-
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await api.delete(`/posts/${post?.id}`);
+              router.back();
+            } catch (e) {
+              console.error("Delete post error:", e);
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   useEffect(() => {
     fetchPostDetail();
@@ -128,6 +128,31 @@ const handleDelete = () => {
       5: "Hóa học",
     };
     return categoryMap[id] || `Môn học ${id}`;
+  };
+
+  const handleChatPress = async () => {
+    if (!post) return;
+
+    try {
+      // Create or get conversation with the post author
+      const conversation = await createConversation(post.user_id);
+
+      // Navigate to message detail screen
+      router.push({
+        pathname: "/messagepage/[conversationId]",
+        params: {
+          conversationId: conversation.id.toString(),
+          participantName: conversation.participantName,
+          participantAvatar: conversation.participantAvatar || "",
+        },
+      });
+    } catch (error: any) {
+      console.error("Error creating conversation:", error);
+      Alert.alert(
+        "Lỗi",
+        error.message || "Không thể bắt đầu cuộc hội thoại. Vui lòng thử lại."
+      );
+    }
   };
 
   if (loading) {
@@ -165,16 +190,12 @@ const handleDelete = () => {
       const formData = new FormData();
       formData.append("post_status", "SOLD");
 
-      await api.put(
-        `/posts/${post.id}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 40000,
-        }
-      );
+      await api.put(`/posts/${post.id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 40000,
+      });
 
       setPost({ ...post, status: "SOLD" });
     } catch (e) {
@@ -433,7 +454,10 @@ const handleDelete = () => {
               </Text>
             </View>
 
-            <TouchableOpacity className="w-9 h-9 rounded-full bg-white items-center justify-center">
+            <TouchableOpacity
+              onPress={handleChatPress}
+              className="w-9 h-9 rounded-full bg-white items-center justify-center"
+            >
               <Ionicons name="chatbubble-outline" size={18} color="#333" />
             </TouchableOpacity>
           </View>
