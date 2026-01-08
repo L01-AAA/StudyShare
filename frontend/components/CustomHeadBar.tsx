@@ -18,24 +18,40 @@ export default function CustomHeadBar({
   const router = useRouter();
   const pathname = usePathname();
 
+  // Danh sách các routes cần hiển thị nút back
   const routesWithBackButton = [
-    "/(account)/accountpage",
     "/accountpage",
-    "/change-password",
+    "/changepasswordpage",
     "/settings",
   ];
 
-  const shouldShowBackButton =
-    showBackButton !== undefined
-      ? showBackButton
-      : routesWithBackButton.some((route) => pathname.includes(route));
+  // Hàm kiểm tra xem pathname có khớp với pattern không
+  const shouldShowBackButton = () => {
+    if (showBackButton !== undefined) {
+      return showBackButton;
+    }
+
+    // Kiểm tra các routes cố định
+    const hasFixedRoute = routesWithBackButton.some((route) => 
+      pathname.includes(route)
+    );
+    
+    if (hasFixedRoute) return true;
+
+    const postDetailPattern = /^\/\d+$/;
+    if (postDetailPattern.test(pathname)) {
+      return true;
+    }
+
+    return false;
+  };
 
   return (
     <>
       <View style={{ paddingTop: insets.top }} className="bg-white">
         <View className="h-20 flex-row items-center px-4">
           <View className="flex-1">
-            {shouldShowBackButton && (
+            {shouldShowBackButton() && (
               <TouchableOpacity
                 onPress={() => router.back()}
                 className="w-10 h-10 items-center justify-center"
@@ -60,9 +76,9 @@ export default function CustomHeadBar({
               className="flex-row items-center space-x-2"
             >
               <View className="relative">
-                {user?.avatar ? (
+                {user?.avatar_url ? (
                   <Image
-                    source={{ uri: user.avatar }}
+                    source={{ uri: user.avatar_url }}
                     className="w-9 h-9 rounded-full border-2 border-orange-500"
                   />
                 ) : (

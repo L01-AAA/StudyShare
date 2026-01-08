@@ -1,13 +1,14 @@
 import api from "@/services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface User {
   id: string;
-  name: string;
+  full_name: string;
   email: string;
-  avatar?: string;
+  avatar_url?: string;
 }
 
 interface UserContextType {
@@ -22,7 +23,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const router = useRouter();
   useEffect(() => {
     loadUser();
   }, []);
@@ -34,8 +35,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setUserState(null);
         return;
       }
-
-      const res = await api.get("/me");
+      const res = await api.get("/users/me");
       setUserState(res.data);
     } catch (error) {
       await SecureStore.deleteItemAsync("accessToken");
@@ -55,7 +55,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setUserState(null);
       }
     } catch (error) {
-      console.error("Error saving user:", error);
+      console.log("Error saving user:", error);
     }
   };
 
@@ -63,9 +63,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       await SecureStore.deleteItemAsync("accessToken");
       await AsyncStorage.removeItem("user");
+      router.replace("/(auth)/login")
       setUserState(null);
     } catch (error) {
-      console.error("Error logging out:", error);
+      console.log("Error logging out:", error);
     }
   };
 

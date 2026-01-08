@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
-import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser } from "../../components/UserContext";
@@ -15,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const submit = async () => {
     try {
@@ -22,27 +23,30 @@ export default function Login() {
         alert("Vui lòng nhập đầy đủ email và mật khẩu!");
         return;
       }
-
-      const result = await api.post("/login", {
+      setLoading(true);
+      const result = await api.post("/auth/login", {
         email: email.trim(),
         password: password,
       });
 
-      if (result.data && result.data.token) {
-        await SecureStore.setItemAsync("accessToken", result.data.token);
+      if (result.data && result.data.tokens) {
+        await SecureStore.setItemAsync("accessToken", result.data.tokens.access_token);
+        await SecureStore.setItemAsync("refreshToken", result.data.tokens.refresh_token);
 
         setUser({
           id: result.data.user.id,
-          name: result.data.user.username || result.data.user.name,
+          full_name: result.data.user.full_name || result.data.user.name,
           email: result.data.user.email,
-          avatar: result.data.user.avatarUrl,
+          avatar_url: result.data.user.avatar_url,
         });
 
-        router.replace("/homepage");
       }
+        router.replace("/homepage");
     } catch (error) {
       console.log("Login error:", error);
       alert("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,13 +126,19 @@ export default function Login() {
 
           <View className="flex-1 justify-end">
             <TouchableOpacity
-              className="bg-black h-12 rounded-xl items-center justify-center mt-6"
+              className={`bg-black h-12 rounded-xl items-center justify-center mt-6 ${loading ? 'opacity-70' : ''}`}
               onPress={submit}
+              disabled={loading}
             >
-              <Text className="text-white text-lg font-semibold">
-                Đăng nhập
-              </Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white text-lg font-semibold">
+                  Đăng nhập
+                </Text>
+              )}
             </TouchableOpacity>
+
 
             <View className="flex-row justify-center mt-6">
               <Text>Bạn chưa có tài khoản? </Text>

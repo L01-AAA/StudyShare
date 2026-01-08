@@ -10,7 +10,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     <View
       style={{
         flexDirection: "row",
-        height: 64 + insets.bottom,
+        height: 64 + insets.bottom, 
         paddingBottom: insets.bottom,
         backgroundColor: "#fff",
         borderTopWidth: 0.5,

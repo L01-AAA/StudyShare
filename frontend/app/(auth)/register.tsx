@@ -36,10 +36,11 @@ export default function Register() {
     try {
       setLoading(true);
 
-      await api.post("/register", {
-        name: name.trim(),
+      await api.post("/auth/register", {
+        full_name: name.trim(),
         email: email.trim(),
-        password,
+        password: password,
+        password_confirm: confirmPassword,
       });
 
       Alert.alert(
@@ -53,6 +54,7 @@ export default function Register() {
         ]
       );
     } catch (error: any) {
+      console.log("Register error:", error);
       const message =
         error?.response?.data?.message ||
         "Đăng ký thất bại. Vui lòng thử lại.";
@@ -125,6 +127,13 @@ export default function Register() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={22}
+              color="#888"
+            />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity

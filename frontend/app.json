@@ -49,15 +49,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "a4078389-9f0d-455c-b995-297f280d0383"
+        "projectId": "5659be08-33ac-42a2-b9ad-b7b40ce0e5ab"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/a4078389-9f0d-455c-b995-297f280d0383"
+      "url": "https://u.expo.dev/5659be08-33ac-42a2-b9ad-b7b40ce0e5ab"
     },
-    "owner": "son.tran22"
+    "owner": "trannamson"
   }
 }

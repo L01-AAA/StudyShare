@@ -1,19 +1,20 @@
 import { useUser } from "@/components/UserContext";
+import api from "@/services/api";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AccountPage() {
@@ -21,48 +22,46 @@ export default function AccountPage() {
   const router = useRouter();
   const { user, setUser, logout } = useUser();
 
-  const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const getInitial = () => {
-    return name ? name.charAt(0).toUpperCase() : "A";
-  };
+  useEffect(() => {
+    if (!user) return;
+
+    setName(user.full_name ?? "");
+    setEmail(user.email ?? "");
+    setAvatar(user.avatar_url ?? "");
+  }, [user]);
+
+  const hasChanges =
+    name.trim() !== (user?.full_name ?? "") ||
+    email.trim() !== (user?.email ?? "") ||
+    avatar !== (user?.avatar_url ?? "");
+
+  const getInitial = () =>
+    name ? name.charAt(0).toUpperCase() : "A";
 
   const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
 
-      if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        setAvatar(imageUri);
-
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Lỗi", "Không thể chọn ảnh");
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
     }
   };
 
-  const uploadAvatar = async (imageUri: string) => {
-    try {
-      setIsLoading(true);
+  const handleCancel = () => {
+    if (!user) return;
 
-    
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return imageUri;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+    setName(user.full_name ?? "");
+    setEmail(user.email ?? "");
+    setAvatar(user.avatar_url ?? "");
   };
 
   const handleUpdateProfile = async () => {
@@ -71,64 +70,43 @@ export default function AccountPage() {
       return;
     }
 
-    if (!email.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập email");
-      return;
-    }
-
     try {
       setIsLoading(true);
+      const result = await api.put("/users/me", {
+        full_name: name.trim()
+      });
 
-     
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      await setUser({
+      setUser({
         ...user!,
-        name: name.trim(),
+        full_name: name.trim(),
         email: email.trim(),
-        avatar: avatar,
+        avatar_url: avatar,
       });
 
       Alert.alert("Thành công", "Cập nhật thông tin thành công");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Lỗi", "Không thể cập nhật thông tin");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: async () => {
-          try {
-     
-
-            await logout();
-            router.replace("/login");
-          } catch (error) {
-            console.error("Error logging out:", error);
-          }
-        },
-      },
-    ]);
-  };
+  if (!user) {
+    return (
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color="#ff6a00" />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      
-      <ScrollView
-        style={styles.content}
+      <KeyboardAwareScrollView
+        enableOnAndroid
+        enableAutomaticScroll
+        extraScrollHeight={150}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
       >
+        {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
             {avatar ? (
@@ -138,229 +116,188 @@ export default function AccountPage() {
                 <Text style={styles.avatarText}>{getInitial()}</Text>
               </View>
             )}
+
             <TouchableOpacity
               style={styles.cameraButton}
               onPress={pickImage}
               disabled={isLoading}
             >
-              <Ionicons name="camera" size={20} color="#ff6a00" />
+              <Ionicons name="image-outline" size={20} color="#ff6a00" />
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Form */}
         <View style={styles.formSection}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Họ và Tên</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder={user?.name}
-              placeholderTextColor="#999"
-              editable={!isLoading}
-            />
-          </View>
+          <Text style={styles.label}>Họ và Tên</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            editable={!isLoading}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder={user?.email}
-              placeholderTextColor="#999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-          </View>
+          <Text style={[styles.label, { marginTop: 16 }]}>Email</Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: "#f7f0edff",
+                color: "#9CA3AF",
+              },
+            ]}
+            value={email}
+            editable={false}
+          />
 
           <TouchableOpacity
             style={styles.changePasswordButton}
-            onPress={() => {router.replace("/changepasswordpage")}}
-            disabled={isLoading}
+            onPress={() => router.push("/changepasswordpage")}
           >
-            <Text style={styles.changePasswordText}>Thay đổi mật khẩu</Text>
+            <Text style={styles.changePasswordText}>
+              Thay đổi mật khẩu
+            </Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.divider} />
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          disabled={isLoading}
-        >
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        {/* Action buttons */}
+        {hasChanges && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelText}>Hủy</Text>
+            </TouchableOpacity>
 
-      {!isLoading ? (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleUpdateProfile}
-          >
-            <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleUpdateProfile}
+              disabled={isLoading}
+            >
+              <Text style={styles.saveButtonText}>Lưu</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </KeyboardAwareScrollView>
+
+      {/* Footer */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        {isLoading ? (
           <ActivityIndicator size="large" color="#ff6a00" />
-        </View>
-      )}
+        ) : (
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={logout}
+          >
+            <Text style={styles.logoutText}>Đăng xuất</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#ff6a00",
-  },
-  placeholder: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  avatarSection: {
-    alignItems: "center",
-    paddingVertical: 32,
-  },
-  avatarContainer: {
-    position: "relative",
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#f0f0f0",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  avatarSection: { alignItems: "center", marginVertical: 32 },
+  avatarContainer: { position: "relative" },
+  avatar: { width: 160, height: 160, borderRadius: 80 },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#ff6a00",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "#e36c2f",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: "#fff",
-  },
+  avatarText: { fontSize: 56, fontWeight: "700", color: "#fff" },
+
   cameraButton: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    right: 8,
+    bottom: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: "#fff",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#ff6a00",
     alignItems: "center",
     justifyContent: "center",
   },
-  formSection: {
-    paddingHorizontal: 24,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
+
+  formSection: { paddingHorizontal: 24 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
   input: {
     height: 50,
-    borderWidth: 1.5,
-    borderColor: "#ff6a00",
     borderRadius: 12,
     paddingHorizontal: 16,
-    fontSize: 16,
-    color: "#333",
-    backgroundColor: "#fff5f0",
-  },
-  changePasswordButton: {
-    height: 50,
-    backgroundColor: "#ff6a00",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  changePasswordText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#eee",
-    marginVertical: 32,
-    marginHorizontal: 24,
-  },
-  logoutButton: {
-    height: 50,
-    borderWidth: 1.5,
+    backgroundColor: "#fff1eb",
+    borderWidth: 1,
     borderColor: "#ff6a00",
+  },
+
+  changePasswordButton: { marginTop: 20, alignSelf: "flex-end" },
+  changePasswordText: { color: "#ff6a00", fontWeight: "600" },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+
+
+  actionRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 24,
+    marginTop: 24,
+  },
+
+  cancelButton: {
+    flex: 1,
+    height: 50,
     borderRadius: 12,
+    backgroundColor: "#f2f2f2",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 24,
-    backgroundColor: "#fff5f0",
   },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ff6a00",
+  cancelText: { fontWeight: "600", color: "#555" },
+
+  saveButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#ff6a00",
+    alignItems: "center",
+    justifyContent: "center",
   },
+  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+
   footer: {
     position: "absolute",
-    bottom: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 12,
     backgroundColor: "#fff",
-    borderTopWidth: 0.5,
+    borderTopWidth: 1,
     borderTopColor: "#eee",
   },
-  saveButton: {
+
+  logoutButton: {
     height: 50,
-    backgroundColor: "#ff6a00",
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ff4d4f",
+    backgroundColor: "#fff1f0",
     alignItems: "center",
     justifyContent: "center",
   },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
+  logoutText: { color: "#ff4d4f", fontSize: 16, fontWeight: "600" },
 });

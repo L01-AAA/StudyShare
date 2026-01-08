@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 
 const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
-  timeout: 10000,
+  timeout: 20000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -15,6 +15,11 @@ api.interceptors.request.use(async config => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+   console.log("=== AXIOS REQUEST ===");
+    console.log("Method:", config.method);
+    console.log("Headers:", config.headers);
+    console.log("Data:", config.data);
+
   return config;
 });
 
