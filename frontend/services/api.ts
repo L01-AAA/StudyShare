@@ -17,7 +17,7 @@ api.interceptors.request.use(async config => {
   }
    console.log("=== AXIOS REQUEST ===");
     console.log("Method:", config.method);
-    console.log("Headers:", config.headers);
+    console.log("Headrers:", config.headers);
     console.log("Data:", config.data);
 
   return config;

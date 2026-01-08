@@ -1,6 +1,6 @@
-import { View, Text, Image, TouchableOpacity, ImageSourcePropType } from "react-native";
-import { tokens } from "./onboardingTokens";
 import { useRouter } from "expo-router";
+import { Image, ImageSourcePropType, Text, TouchableOpacity, View } from "react-native";
+import { tokens } from "./onboardingTokens";
 
 interface OnboardingLayoutProps {
   imageSource: ImageSourcePropType;

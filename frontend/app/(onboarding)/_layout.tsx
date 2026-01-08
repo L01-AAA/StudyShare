@@ -1,7 +1,7 @@
-import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
-import { View, ActivityIndicator } from "react-native";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 export default function RootLayout() {
@@ -15,7 +15,7 @@ export default function RootLayout() {
   if (!fontsLoaded) {
     return (
       <View className="flex-1 justify-center items-center bg-neutral-100">
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={"#ff6a00"} />
       </View>
     );
   }
