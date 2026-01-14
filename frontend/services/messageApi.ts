@@ -28,6 +28,7 @@ export interface Conversation {
   participantName: string;
   participantAvatar?: string;
   lastMessage?: string;
+  lastMessageSenderId?: number | null;
   lastMessageTime: string;
   unreadCount: number;
   createdAt?: string;
@@ -52,6 +53,7 @@ interface BackendConversation {
   other_user_name: string;
   other_user_avatar: string | null;
   last_message_content: string | null;
+  last_message_sender_id: number | null;
   last_message_at: string | null;
   unread_count: number;
   created_at: string;
@@ -86,6 +88,7 @@ export const getConversations = async (): Promise<Conversation[]> => {
       participantName: conv.other_user_name,
       participantAvatar: conv.other_user_avatar || undefined,
       lastMessage: conv.last_message_content || "",
+      lastMessageSenderId: conv.last_message_sender_id,
       lastMessageTime: conv.last_message_at || new Date().toISOString(),
       unreadCount: conv.unread_count,
       createdAt: conv.created_at,
@@ -315,22 +318,11 @@ export const clearUserIdCache = (): void => {
  * Connect to WebSocket for real-time messaging
  */
 export const connectWebSocket = async (
-  conversationId: string | number,
-  onMessage?: MessageHandler,
-  onTyping?: TypingHandler,
-  onError?: ErrorHandler,
-  onConnect?: ConnectionHandler,
-  onDisconnect?: ConnectionHandler
+  conversationId: string | number
 ): Promise<void> => {
   try {
-    await messageWsService.connect(
-      conversationId,
-      onMessage,
-      onTyping,
-      onError,
-      onConnect,
-      onDisconnect
-    );
+    // Chỉ connect với conversationId
+    await messageWsService.connect(conversationId);
   } catch (error: any) {
     console.error("Error connecting to WebSocket:", error.message);
     throw error;

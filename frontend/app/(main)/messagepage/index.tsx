@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -19,10 +19,12 @@ import {
   Conversation,
 } from "@/services/messageApi";
 import { useNotifications } from "@/components/NotificationContext";
+import * as SecureStore from "expo-secure-store";
 
 const MessagePage = () => {
   const router = useRouter();
   const { unreadCount } = useNotifications();
+  const { notifications } = useNotifications();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<
     Conversation[]
@@ -32,6 +34,48 @@ const MessagePage = () => {
   const [searchText, setSearchText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const currentUserIdRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!notifications.length) return;
+
+    const latest = notifications[0];
+
+    if (latest.type !== "message" || !latest.referenceId) return;
+
+    setConversations((prev) => {
+      const idx = prev.findIndex((c) => c.id === latest.referenceId);
+
+      if (idx === -1) return prev;
+
+      const updated = [...prev];
+      const conv = updated[idx];
+
+      updated.splice(idx, 1);
+
+      updated.unshift({
+        ...conv,
+        lastMessage: latest.message,
+        lastMessageTime: latest.createdAt,
+        unreadCount: conv.unreadCount + 1,
+      });
+
+      return updated;
+    });
+  }, [notifications]);
+
+  useEffect(() => {
+    setFilteredConversations(conversations);
+  }, [conversations]);
+
+  useEffect(() => {
+    SecureStore.getItemAsync("userData").then((u) => {
+      if (u) {
+        const user = JSON.parse(u);
+        currentUserIdRef.current = Number(user.id);
+      }
+    });
+  }, []);
   // Load conversations khi screen được focus
   useFocusEffect(
     useCallback(() => {
@@ -326,13 +370,18 @@ const MessagePage = () => {
                 <Text
                   className={`mt-1 text-sm ${
                     conversation.unreadCount > 0
-                      ? "font-roboto-bold text-gray-600"
+                      ? "font-roboto-bold text-gray-700"
                       : "text-gray-500"
                   }`}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {conversation.lastMessage || "Chưa có tin nhắn nào"}
+                  {conversation.lastMessage
+                    ? conversation.lastMessageSenderId ===
+                      currentUserIdRef.current
+                      ? `Bạn: ${conversation.lastMessage}`
+                      : `${conversation.lastMessage}`
+                    : "Chưa có tin nhắn"}
                 </Text>
               </View>
 

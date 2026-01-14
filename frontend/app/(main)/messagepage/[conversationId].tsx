@@ -30,18 +30,13 @@ import {
   removeWsErrorListener,
   removeWsConnectListener,
   removeWsDisconnectListener,
-  addWsNotificationListener,
-  removeWsNotificationListener,
   Message,
   sendTypingIndicator,
 } from "@/services/messageApi";
-import {
-  WsChatMessage,
-  WsTypingIndicator,
-  WsNotification,
-} from "@/services/messageWsApi";
-import { useNotifications } from "@/components/NotificationContext";
+import { WsChatMessage, WsTypingIndicator } from "@/services/messageWsApi";
+
 import * as SecureStore from "expo-secure-store";
+import { useChatState } from "../../../components/ChatStateContext";
 
 interface MessageWithLocal extends Message {
   localId?: string;
@@ -49,14 +44,13 @@ interface MessageWithLocal extends Message {
 
 const MessageDetail = () => {
   const router = useRouter();
-  const { addNotification } = useNotifications();
   const { conversationId, participantName, participantAvatar } =
     useLocalSearchParams<{
       conversationId: string;
       participantName: string;
       participantAvatar?: string;
     }>();
-
+  const { setCurrentConversationId } = useChatState();
   const [messages, setMessages] = useState<MessageWithLocal[]>([]);
   const [messageText, setMessageText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -72,7 +66,7 @@ const MessageDetail = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const currentUserIdRef = useRef<number>(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const shouldAutoScrollRef = useRef(true);
   // Lấy user ID
   useEffect(() => {
     SecureStore.getItemAsync("userData").then((u) => {
@@ -82,38 +76,15 @@ const MessageDetail = () => {
       }
     });
   }, []);
-
-  // ✅ Thêm notification handler
-  const handleWsNotification = useCallback(
-    (notification: WsNotification) => {
-      console.log("[Chat] New notification received:", notification);
-
-      // Convert WsNotification to Notification type
-      const notif = {
-        id: notification.id,
-        userId: notification.user_id,
-        title: notification.title,
-        message: notification.message,
-        type: notification.type,
-        referenceId: notification.reference_id,
-        isRead: notification.is_read,
-        createdAt: notification.created_at,
-      };
-
-      // Add to notification context
-      addNotification(notif);
-
-      // Show alert hoặc toast (optional)
-      console.log("[Chat] Notification added to context:", notif.title);
-    },
-    [addNotification]
-  );
+  useEffect(() => {
+    setCurrentConversationId(Number(conversationId));
+    return () => setCurrentConversationId(null);
+  }, [conversationId]);
 
   // WebSocket handlers
   const handleWsMessage = useCallback((wsMessage: WsChatMessage) => {
-    if (wsMessage.sender_id === currentUserIdRef.current) {
-      return;
-    }
+    if (wsMessage.conversation_id !== Number(conversationId)) return;
+    if (wsMessage.sender_id === currentUserIdRef.current) return;
 
     const newMessage: MessageWithLocal = {
       id: wsMessage.id,
@@ -126,6 +97,7 @@ const MessageDetail = () => {
 
     setMessages((prev) => {
       if (prev.some((m) => m.id === newMessage.id)) return prev;
+      shouldAutoScrollRef.current = true;
       return [...prev, newMessage];
     });
 
@@ -166,67 +138,24 @@ const MessageDetail = () => {
   // Initialize chat
   useEffect(() => {
     if (!conversationId) return;
+    console.log("[Chat] Register listeners + connect");
+    addWsMessageListener(handleWsMessage);
+    addWsTypingListener(handleWsTyping);
+    addWsErrorListener(handleWsError);
+    addWsConnectListener(handleWsConnect);
+    addWsDisconnectListener(handleWsDisconnect);
 
-    let isMounted = true;
-
-    const initializeChat = async () => {
-      try {
-        // 0. Register listeners TRƯỚC kết nối
-        console.log("[Chat] Registering listeners first...");
-        addWsMessageListener(handleWsMessage);
-        addWsTypingListener(handleWsTyping);
-        addWsErrorListener(handleWsError);
-        addWsConnectListener(handleWsConnect);
-        addWsDisconnectListener(handleWsDisconnect);
-        addWsNotificationListener(handleWsNotification);
-        if (!isMounted) return;
-
-        // 1. Load messages
-        console.log("[Chat] Loading messages...");
-        await fetchMessages();
-
-        if (!isMounted) return;
-
-        // 2. Connect WebSocket - để nhận tin nhắn realtime
-        console.log("[Chat] Connecting to WebSocket...");
-        await connectWebSocket(conversationId);
-
-        if (!isMounted) return;
-
-        console.log("[Chat] WebSocket connected!");
-      } catch (error) {
-        console.error("[Chat Init Error]", error);
-        if (isMounted) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Không thể kết nối. Vui lòng thử lại."
-          );
-        }
-      }
-    };
-
-    initializeChat();
-
+    connectWebSocket(conversationId);
     return () => {
-      isMounted = false;
+      console.log("[Chat] Cleanup WS");
       removeWsMessageListener(handleWsMessage);
       removeWsTypingListener(handleWsTyping);
       removeWsErrorListener(handleWsError);
       removeWsConnectListener(handleWsConnect);
       removeWsDisconnectListener(handleWsDisconnect);
-      removeWsNotificationListener(handleWsNotification);
       disconnectWebSocket();
     };
-  }, [
-    conversationId,
-    handleWsMessage,
-    handleWsTyping,
-    handleWsError,
-    handleWsConnect,
-    handleWsDisconnect,
-    handleWsNotification,
-  ]);
+  }, [conversationId]);
 
   const [messageCount, setMessageCount] = useState(0);
 
@@ -299,6 +228,13 @@ const MessageDetail = () => {
     }
   };
 
+  useEffect(() => {
+    if (!conversationId) return;
+
+    console.log("[Chat] Load messages history");
+    fetchMessages(0);
+  }, [conversationId]);
+
   const handleLoadMore = () => {
     if (!loadingMore && canLoadMore && messages.length > 0) {
       fetchMessages(messageCount);
@@ -326,7 +262,10 @@ const MessageDetail = () => {
       isRead: false,
     };
 
-    setMessages((prev) => [...prev, optimisticMessage]);
+    setMessages((prev) => {
+      shouldAutoScrollRef.current = true;
+      return [...prev, optimisticMessage];
+    });
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
@@ -497,9 +436,12 @@ const MessageDetail = () => {
             ref={scrollViewRef}
             className="flex-1 px-4 py-4"
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: false })
-            }
+            onContentSizeChange={() => {
+              if (shouldAutoScrollRef.current) {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+                shouldAutoScrollRef.current = false;
+              }
+            }}
           >
             {/* Load more indicator */}
             {loadingMore && (
@@ -600,12 +542,6 @@ const MessageDetail = () => {
                           )}
                         </View>
                       </View>
-
-                      {isOwn && (
-                        <View className="w-8 h-8 rounded-full bg-gray-400 mr-2 mt-1 overflow-hidden">
-                          <Ionicons name="person" size={16} color="#fff" />
-                        </View>
-                      )}
                     </View>
                   </View>
                 );
